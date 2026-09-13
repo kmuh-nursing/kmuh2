@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高雄市立聯合醫院護理科 預防跌倒稽核與數據統整系統</title>
+    <meta property="og:title" content="高雄市立聯合醫院護理科 預防跌倒稽核與數據統整系統">
+    <meta property="og:description" content="預防跌倒稽核表 請依照病房實際稽核情況逐項評估，填寫被稽核對象與相關人員後點選送出。">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+    <!-- 頂部導覽列 -->
+    <header class="bg-emerald-700 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-2">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/10 p-2 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wider">高雄市立聯合醫院</h1>
+                    <p class="text-xs text-emerald-100">預防跌倒稽核與數據統整系統 (權限控管版)</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+                <span id="cloud-status" class="flex items-center gap-1 bg-emerald-800/60 px-2.5 py-1 rounded-full text-emerald-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 雲端連線中
+                </span>
+                <nav class="flex gap-2">
+                    <button id="nav-form" onclick="switchTab('form')" class="bg-white text-emerald-800 font-semibold px-3.5 py-1.5 rounded-md shadow transition flex items-center gap-1 cursor-pointer">
+                        📝 填寫稽核表
+                    </button>
+                    <button id="nav-admin" onclick="switchTab('admin')" class="bg-emerald-800/80 hover:bg-emerald-800 text-white font-medium px-3.5 py-1.5 rounded-md shadow transition flex items-center gap-1 cursor-pointer">
+                        📊 後台數據統計 🔒
+                    </button>
+                </nav>
+            </div>
+        </div>
+        <div class="bg-emerald-800 text-center py-1 text-[11px] text-emerald-200 tracking-wide border-t border-emerald-600/30">
+            🟢 全院即時上傳同步
+        </div>
+    </header>
+
+    <!-- 內容區域 -->
+    <main class="max-w-5xl mx-auto px-4 py-6">
+        <!-- 填寫表單頁面 -->
+        <div id="section-form" class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">預防跌倒稽核表</h2>
+                <p class="text-xs text-slate-500 mb-6">請依照病房實際稽核情況逐項評估，填寫被稽核對象與相關人員後點選送出。</p>
+
+                <!-- 欄位資訊 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">受稽核單位</label>
+                        <select id="audit-unit" onchange="handleUnitChange()" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="ICU">ICU</option>
+                            <option value="HDR">HDR</option>
+                            <option value="手術室">手術室</option>
+                            <option value="注射室">注射室</option>
+                            <option value="ER">ER</option>
+                            <option value="72">72</option>
+                            <option value="放射科">放射科</option>
+                            <option value="門診">門診</option>
+                            <option value="BR">BR</option>
+                            <option value="W91">W91</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">被稽核對象 / 床號 / 姓名 <span class="text-red-500">*</span></label>
+                        <input type="text" id="audit-target" placeholder="例: 9101床 王OO" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">稽核日期</label>
+                        <input type="date" id="audit-date" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">稽核人員 <span class="text-red-500">*</span></label>
+                        <input type="text" id="audit-staff" placeholder="請輸入姓名" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <!-- 題目清單 -->
+                <div id="questions-container" class="space-y-4">
+                    <!-- 動態生成題目 -->
+                </div>
+
+                <div class="mt-8 flex justify-end">
+                    <button onclick="submitAuditForm()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-lg shadow transition text-sm cursor-pointer">
+                        送出稽核表
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 後台統計頁面 (密碼保護) -->
+        <div id="section-admin" class="hidden space-y-6">
+            <!-- 密碼登入區塊 -->
+            <div id="admin-login-box" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center mt-12">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">🔒</div>
+                <h3 class="text-lg font-bold text-slate-900 mb-2">後台權限保護</h3>
+                <p class="text-xs text-slate-500 mb-6">本區域屬於後台數據統計與匯出專用，請輸入系統存取密碼以繼續。</p>
+                <input type="password" id="admin-pwd-input" placeholder="請輸入密碼" class="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-sm mb-4 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <button onclick="verifyAdminPassword()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-md shadow transition text-sm cursor-pointer">
+                    登入後台
+                </button>
+            </div>
+
+            <!-- 登入後的統計數據主畫面 -->
+            <div id="admin-content-box" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">預防跌倒稽核統計總表</h2>
+                        <p class="text-xs text-slate-500">各單位未做到次數統計與達成率分析 (已自動扣除不適用項目分母)</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-4 py-2 rounded-md shadow transition flex items-center gap-1.5 cursor-pointer">
+                            📥 匯出 Excel 報表
+                        </button>
+                        <button onclick="lockAdmin()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-3 py-2 rounded-md transition cursor-pointer">
+                            🔒 登出後台
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 統計表格 -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                                <th class="p-3 border-r border-slate-200 w-1/3">項目 / 未做到次數</th>
+                                <th class="p-2 text-center border-r border-slate-200">ICU</th>
+                                <th class="p-2 text-center border-r border-slate-200">HDR</th>
+                                <th class="p-2 text-center border-r border-slate-200">手術室</th>
+                                <th class="p-2 text-center border-r border-slate-200">注射室</th>
+                                <th class="p-2 text-center border-r border-slate-200">ER</th>
+                                <th class="p-2 text-center border-r border-slate-200">72</th>
+                                <th class="p-2 text-center border-r border-slate-200">放射科</th>
+                                <th class="p-2 text-center border-r border-slate-200">門診</th>
+                                <th class="p-2 text-center border-r border-slate-200">BR</th>
+                                <th class="p-2 text-center border-r border-slate-200">W91</th>
+                                <th class="p-2 text-center border-r border-slate-200 font-bold bg-slate-200">做到達成率(科)</th>
+                                <th class="p-2 text-center font-bold bg-slate-200">未完成率</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-table-body" class="divide-y divide-slate-200">
+                            <!-- 動態載入統計列 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 歷史紀錄列表 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-sm text-slate-900">歷史稽核紀錄清單</h3>
+                        <button onclick="clearAllData()" class="text-xs text-red-600 hover:text-red-800 underline cursor-pointer">清除所有紀錄</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                    <th class="p-2">日期</th>
+                                    <th class="p-2">單位</th>
+                                    <th class="p-2">被稽核對象</th>
+                                    <th class="p-2">稽核人員</th>
+                                    <th class="p-2">狀態摘要</th>
+                                </tr>
+                            </thead>
+                            <tbody id="records-table-body" class="divide-y divide-slate-100">
+                                <!-- 紀錄項目 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const questions = [
+            { id: 1, text: "1. 病人入院或轉入院依「跌倒高風險因子」病人篩選≥4分者或2分以上但不尋求協助，即屬於高風險跌倒病人，須列入三班交班並每30分至1小時探視一次", naUnits: [] },
+            { id: 2, text: "2. 病人住院期間，每天或病情有變化時，進行身體評估並記錄", naUnits: [] },
+            { id: 3, text: "3. 病人為「跌倒高風險群」，給予衛教單張並指導病人或家屬，造成跌倒的危險因子及預防跌倒注意事項，並有紀錄。", naUnits: [] },
+            { id: 4, text: "4. 病室走道及浴廁暢通，無障礙物，保持良好照明", naUnits: [] },
+            { id: 5, text: "5. 病床輪子固定，維持最低床位，放置安全護欄，教導病人及家屬正確使用call bell", naUnits: [] },
+            { id: 6, text: "6. 評估病人意識狀態、活動功能及使用影響意識或活動能力之藥物(如鎮靜安眠藥、降血壓藥等)", naUnits: [] },
+            { id: 7, text: "7. 離床活動時，提供合適防滑鞋及適當輔具，協助病人安全活動", naUnits: [] },
+            { id: 8, text: "8. 浴室及廁所內備有防滑設施及求助鈴，並教導正確使用方式", naUnits: [] },
+            { id: 9, text: "9. 發生跌倒事件時，立即處理並通報，進行事件檢討與改善措施", naUnits: [] },
+            { id: 10, text: "10. 定期評估跌倒防範措施之落實情形，並列入單位品質改善指標", naUnits: [] }
+        ];
+
+        const unitsList = ["ICU", "HDR", "手術室", "注射室", "ER", "72", "放射科", "門診", "BR", "W91"];
+
+        document.getElementById('audit-date').valueAsDate = new Date();
+
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            const currentUnit = document.getElementById('audit-unit').value;
+            let html = '';
+
+            questions.forEach((q) => {
+                const isAutoNA = q.naUnits.includes(currentUnit);
+                html += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="text-sm font-semibold text-slate-900">${q.text}</div>
+                        <div class="flex flex-wrap items-center gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="q_${q.id}" value="done" ${isAutoNA ? '' : 'checked'} class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-slate-700">做到</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="q_${q.id}" value="undone" class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-slate-700">未做到</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="q_${q.id}" value="na" ${isAutoNA ? 'checked' : ''} class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-slate-700">不適用 ${q.naUnits.length > 0 ? `(${q.naUnits.join('、')})` : ''}</span>
+                            </label>
+                        </div>
+                        <input type="text" id="remark_${q.id}" placeholder="備註說明 (選填) ..." class="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function handleUnitChange() {
+            renderQuestions();
+        }
+
+        function switchTab(tab) {
+            const formSec = document.getElementById('section-form');
+            const adminSec = document.getElementById('section-admin');
+            const navForm = document.getElementById('nav-form');
+            const navAdmin = document.getElementById('nav-admin');
+
+            if (tab === 'form') {
+                formSec.classList.remove('hidden');
+                adminSec.classList.add('hidden');
+                navForm.className = "bg-white text-emerald-800 font-semibold px-3.5 py-1.5 rounded-md shadow transition flex items-center gap-1 cursor-pointer";
+                navAdmin.className = "bg-emerald-800/80 hover:bg-emerald-800 text-white font-medium px-3.5 py-1.5 rounded-md shadow transition flex items-center gap-1 cursor-pointer";
+            } else {
+                formSec.classList.add('hidden');
+                adminSec.classList.remove('hidden');
+                navAdmin.className = "bg-white text-emerald-800 font-semibold px-3.5 py-1.5 rounded-md shadow transition flex items-center gap-1 cursor-pointer";
+                navForm.className = "bg-emerald-800/80 hover:bg-emerald-800 text-white font-medium px-3.5 py-1.5 rounded-md shadow transition flex items-center gap-1 cursor-pointer";
+            }
+        }
+
+        function verifyAdminPassword() {
+            const pwd = document.getElementById('admin-pwd-input').value;
+            if (pwd === 'kmuh2026') {
+                document.getElementById('admin-login-box').classList.add('hidden');
+                document.getElementById('admin-content-box').classList.remove('hidden');
+                document.getElementById('admin-pwd-input').value = '';
+                renderStatsTable();
+            } else {
+                alert('密碼錯誤，請重新輸入！');
+            }
+        }
+
+        function lockAdmin() {
+            document.getElementById('admin-login-box').classList.remove('hidden');
+            document.getElementById('admin-content-box').classList.add('hidden');
+        }
+
+        function submitAuditForm() {
+            const unit = document.getElementById('audit-unit').value;
+            const target = document.getElementById('audit-target').value.trim();
+            const date = document.getElementById('audit-date').value;
+            const staff = document.getElementById('audit-staff').value.trim();
+
+            if (!target || !staff) {
+                alert('請填寫「被稽核對象」與「稽核人員」！');
+                return;
+            }
+
+            let results = [];
+            questions.forEach(q => {
+                const radios = document.getElementsByName(`q_${q.id}`);
+                let val = 'done';
+                for (let r of radios) {
+                    if (r.checked) val = r.value;
+                }
+                const remark = document.getElementById(`remark_${q.id}`).value;
+                results.push({ id: q.id, status: val, remark: remark });
+            });
+
+            const record = { unit, target, date, staff, results, timestamp: new Date().getTime() };
+            let allRecords = JSON.parse(localStorage.getItem('kmuh_fall_records') || '[]');
+            allRecords.push(record);
+            localStorage.setItem('kmuh_fall_records', JSON.stringify(allRecords));
+
+            alert('跌倒稽核表已成功送出並同步！');
+            document.getElementById('audit-target').value = '';
+            document.getElementById('audit-staff').value = '';
+            renderQuestions();
+        }
+
+        function renderStatsTable() {
+            const allRecords = JSON.parse(localStorage.getItem('kmuh_fall_records') || '[]');
+            let tbody = document.getElementById('stats-table-body');
+            let recBody = document.getElementById('records-table-body');
+
+            let matrix = Array(10).fill(0).map(() => Array(unitsList.length).fill(0));
+            let unitTotalCounts = Array(unitsList.length).fill(0);
+            let unitUndoneCounts = Array(unitsList.length).fill(0);
+
+            allRecords.forEach(rec => {
+                let uIdx = unitsList.indexOf(rec.unit);
+                if (uIdx === -1) return;
+
+                rec.results.forEach(res => {
+                    let qIdx = res.id - 1;
+                    let qInfo = questions[qIdx];
+                    let isNA = qInfo.naUnits.includes(rec.unit) || res.status === 'na';
+
+                    if (!isNA) {
+                        unitTotalCounts[uIdx]++;
+                        if (res.status === 'undone') {
+                            matrix[qIdx][uIdx]++;
+                            unitUndoneCounts[uIdx]++;
+                        }
+                    }
+                });
+            });
+
+            let html = '';
+            questions.forEach((q, qIdx) => {
+                html += `<tr class="hover:bg-slate-50"><td class="p-2 border-r border-slate-200 font-medium text-slate-700">${q.text}</td>`;
+                unitsList.forEach((u, uIdx) => {
+                    let count = matrix[qIdx][uIdx];
+                    let isNaForUnit = q.naUnits.includes(u);
+                    let cellDisplay = isNaForUnit ? '<span class="text-slate-300">/</span>' : count;
+                    html += `<td class="p-2 text-center border-r border-slate-200 text-slate-600">${cellDisplay}</td>`;
+                });
+                html += `<td class="p-2 text-center border-r border-slate-200 bg-slate-50"></td><td class="p-2 text-center bg-slate-50"></td></tr>`;
+            });
+
+            html += `<tr class="bg-slate-100 font-bold border-t-2 border-slate-300"><td class="p-2 border-r border-slate-200 text-slate-900">做到月平均達成率(單位)</td>`;
+            unitsList.forEach((u, uIdx) => {
+                let total = unitTotalCounts[uIdx];
+                let undone = unitUndoneCounts[uIdx];
+                let rateStr = total === 0 ? "100.00%" : (((total - undone) / total) * 100).toFixed(2) + "%";
+                html += `<td class="p-2 text-center border-r border-slate-200 text-emerald-700">${rateStr}</td>`;
+            });
+            html += `<td class="p-2 text-center border-r border-slate-200">100.00%</td><td class="p-2 text-center">0.00%</td></tr>`;
+            tbody.innerHTML = html;
+
+            let recHtml = '';
+            if (allRecords.length === 0) {
+                recHtml = `<tr><td colspan="5" class="p-4 text-center text-slate-400">目前尚無稽核紀錄</td></tr>`;
+            } else {
+                allRecords.slice().reverse().forEach((r) => {
+                    let undoneCount = r.results.filter(x => x.status === 'undone').length;
+                    recHtml += `
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="p-2">${r.date}</td>
+                            <td class="p-2 font-medium">${r.unit}</td>
+                            <td class="p-2">${r.target}</td>
+                            <td class="p-2">${r.staff}</td>
+                            <td class="p-2 text-slate-500">未做到項目: ${undoneCount} 項</td>
+                        </tr>
+                    `;
+                });
+            }
+            recBody.innerHTML = recHtml;
+        }
+
+        function clearAllData() {
+            if (confirm('確定要清除所有歷史跌倒稽核紀錄嗎？')) {
+                localStorage.removeItem('kmuh_fall_records');
+                renderStatsTable();
+                alert('已清除所有紀錄。');
+            }
+        }
+
+        function exportToExcel() {
+            let wb = XLSX.utils.book_new();
+            let ws_data = [
+                ["高雄市立聯合醫院護理科 預防跌倒稽核統計表"],
+                ["項目", "ICU", "HDR", "手術室", "注射室", "ER", "72", "放射科", "門診", "BR", "W91"]
+            ];
+
+            const allRecords = JSON.parse(localStorage.getItem('kmuh_fall_records') || '[]');
+            let matrix = Array(10).fill(0).map(() => Array(unitsList.length).fill(0));
+            allRecords.forEach(rec => {
+                let uIdx = unitsList.indexOf(rec.unit);
+                if (uIdx !== -1) {
+                    rec.results.forEach(res => {
+                        if (res.status === 'undone') matrix[res.id - 1][uIdx]++;
+                    });
+                }
+            });
+
+            questions.forEach((q, qIdx) => {
+                let row = [q.text];
+                unitsList.forEach((u, uIdx) => {
+                    let isNa = q.naUnits.includes(u);
+                    row.push(isNa ? "/" : matrix[qIdx][uIdx]);
+                });
+                ws_data.push(row);
+            });
+
+            let ws = XLSX.utils.aoa_to_sheet(ws_data);
+            XLSX.utils.book_append_sheet(wb, ws, "預防跌倒統計");
+            XLSX.writeFile(wb, "KMUH_Fall_Prevention_Report.xlsx");
+        }
+
+        renderQuestions();
+    </script>
+</body>
+</html>
