@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高雄市立聯合醫院預防跌倒稽核與統計系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-emerald-700 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3 mb-3 sm:mb-0">
+                <div class="bg-white text-emerald-700 p-2 rounded-lg font-bold text-xl shadow">
+                    <i class="fa-solid fa-hospital"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-wide">高雄市立聯合醫院</h1>
+                    <p class="text-xs text-emerald-100">預防跌倒稽核與數據統整系統 (權限控管版)</p>
+                </div>
+            </div>
+            <!-- Tab Navigation & Cloud Status -->
+            <div class="flex items-center space-x-3">
+                <div id="cloud-status" class="hidden sm:flex items-center space-x-1.5 text-xs bg-emerald-800/80 px-3 py-1.5 rounded-full text-emerald-200 border border-emerald-600">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="cloud-status-text">雲端連線中...</span>
+                </div>
+                <div class="flex bg-emerald-800 p-1 rounded-xl space-x-1 shadow-inner">
+                    <button onclick="switchTab('form')" id="tab-form" class="px-4 py-2 rounded-lg text-sm font-medium transition bg-white text-emerald-800 shadow">
+                        <i class="fa-solid fa-clipboard-list mr-1"></i> 填寫稽核表
+                    </button>
+                    <button onclick="requestDashboardAccess()" id="tab-dashboard" class="px-4 py-2 rounded-lg text-sm font-medium transition text-white hover:bg-emerald-700">
+                        <i class="fa-solid fa-chart-column mr-1"></i> 後台數據統整 <i class="fa-solid fa-lock text-xs ml-1 text-amber-300"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- VIEW 1: Audit Form (Questionnaire Style) -->
+        <section id="view-form" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                <div class="border-b border-slate-100 pb-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">預防跌倒稽核表</h2>
+                        <p class="text-sm text-slate-500 mt-1">請依照病房實際稽核情況逐項評估，填寫被稽核對象與相關人員後點選送出。</p>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs text-emerald-800 flex items-center space-x-2">
+                        <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+                        <span>全院即時上傳同步</span>
+                    </div>
+                </div>
+
+                <!-- Metadata Form -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">受稽核單位</label>
+                        <select id="audit-unit" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="W91">W91</option>
+                            <option value="W92">W92</option>
+                            <option value="W82">W82</option>
+                            <option value="W72">W72</option>
+                            <option value="W51">W51</option>
+                            <option value="W52">W52</option>
+                            <option value="PICU">PICU</option>
+                            <option value="AICU">AICU</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">被稽核對象 / 床號 / 姓名 <span class="text-rose-500">*</span></label>
+                        <input type="text" id="audited-target" placeholder="例: 9101床 王OO" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">稽核日期</label>
+                        <input type="date" id="audit-date" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">稽核人員 <span class="text-rose-500">*</span></label>
+                        <input type="text" id="auditor-name" placeholder="請輸入姓名" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Questions List -->
+                <div id="questions-container" class="space-y-6">
+                    <!-- Dynamically injected via JS -->
+                </div>
+
+                <!-- Submit Button -->
+                <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                    <button onclick="submitAuditForm()" id="submit-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-3 rounded-xl shadow-md transition flex items-center space-x-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>提交至雲端同步</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: Dashboard & Statistics (Password Protected) -->
+        <section id="view-dashboard" class="hidden space-y-6">
+            <!-- Header Controls -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">預防跌倒稽核統計表 (後台數據統整)</h2>
+                    <p class="text-sm text-slate-500 mt-1">即時各護理單位達成率與各項目統計矩陣分析（所有使用者即時同步）</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Month Filter Dropdown -->
+                    <div class="flex items-center space-x-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300">
+                        <i class="fa-solid fa-calendar-days text-slate-500 text-xs"></i>
+                        <label for="month-filter" class="text-xs font-semibold text-slate-600">統計月份:</label>
+                        <select id="month-filter" onchange="updateDashboard()" class="bg-transparent text-sm font-bold text-slate-800 focus:outline-none cursor-pointer">
+                            <option value="all">全部月份 (總計)</option>
+                        </select>
+                    </div>
+
+                    <span class="text-xs bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg font-medium">
+                        <i class="fa-solid fa-lock-open mr-1"></i> 已授權檢視模式
+                    </span>
+                    <button onclick="exportCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg border border-slate-300 transition">
+                        <i class="fa-solid fa-download mr-1"></i> 匯出報表
+                    </button>
+                    <button onclick="lockDashboard()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm font-medium px-3 py-2 rounded-lg border border-rose-200 transition" title="重新上鎖">
+                        <i class="fa-solid fa-lock"></i> 登出後台
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">篩選月份總稽核件數 (N)</p>
+                        <h3 id="stat-total-n" class="text-3xl font-extrabold text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl text-xl">
+                        <i class="fa-solid fa-file-medical"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">整體達成率</p>
+                        <h3 id="stat-achievement-rate" class="text-3xl font-extrabold text-emerald-600 mt-1">100%</h3>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">未做到比率</p>
+                        <h3 id="stat-unfulfilled-rate" class="text-3xl font-extrabold text-rose-600 mt-1">0%</h3>
+                    </div>
+                    <div class="p-3 bg-rose-50 text-rose-600 rounded-xl text-xl">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matrix Table Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <span class="font-bold text-slate-700"><i class="fa-solid fa-table mr-2 text-emerald-600"></i>各單位項目執行情形統計矩陣</span>
+                    <span class="text-xs text-slate-500">標準：完成率閾值 ≥ 98.5%</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                                <th class="p-3 border-r border-slate-200 font-bold min-w-[260px]">項目</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">W91</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">W92</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">W82</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">W72</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">W51</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">W52</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">PICU</th>
+                                <th class="p-3 text-center border-r border-slate-250 w-14">AICU</th>
+                                <th class="p-3 text-center border-r border-slate-200 font-bold bg-emerald-50 text-emerald-800 w-24">做到達成率</th>
+                                <th class="p-3 text-center font-bold bg-rose-50 text-rose-800 w-24">未做到比率</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-tbody" class="divide-y divide-slate-200">
+                            <!-- Injected by JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-slate-50 font-bold text-slate-800 border-t-2 border-slate-300">
+                                <td class="p-3 border-r border-slate-200">單位達成率</td>
+                                <td id="col-total-W91" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-W92" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-W82" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-W72" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-W51" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-W52" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-PICU" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-AICU" class="p-3 text-center border-r border-slate-200">100%</td>
+                                <td id="col-total-overall" class="p-3 text-center bg-emerald-100 text-emerald-900 border-r border-slate-200">100.00%</td>
+                                <td id="col-total-unfulfilled" class="p-3 text-center bg-rose-100 text-rose-900">0.00%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Submissions Log -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center">
+                    <i class="fa-solid fa-clock-rotate-left mr-2 text-emerald-600"></i> 雲端提交稽核明細紀錄 (依月份過濾)
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
+                                <th class="p-3 rounded-l-lg">時間</th>
+                                <th class="p-3">單位</th>
+                                <th class="p-3">被稽核對象 / 床號</th>
+                                <th class="p-3">稽核人員</th>
+                                <th class="p-3">稽核日期</th>
+                                <th class="p-3">符合項目數</th>
+                                <th class="p-3 rounded-r-lg text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="submissions-tbody" class="divide-y divide-slate-100">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Password Modal for Dashboard Access -->
+    <div id="password-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 transform transition-all">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl mb-4 mx-auto bg-amber-100 text-amber-600">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 text-center mb-1">後台數據管理授權</h3>
+            <p class="text-xs text-slate-500 text-center mb-4">請輸入後台管理密碼以檢視統計與矩陣分析</p>
+            <div class="mb-4">
+                <input type="password" id="admin-password-input" placeholder="請輸入管理密碼..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none text-center tracking-widest font-bold">
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="closePasswordModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium py-2.5 rounded-xl transition">取消</button>
+                <button onclick="verifyAdminPassword()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2.5 rounded-xl shadow transition">確認登入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal / Alert Box -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all">
+            <div id="modal-icon" class="w-12 h-12 rounded-full flex items-center justify-center text-xl mb-4 mx-auto bg-emerald-100 text-emerald-600">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 id="modal-title" class="text-lg font-bold text-slate-800 text-center mb-2">提示訊息</h3>
+            <p id="modal-message" class="text-sm text-slate-600 text-center mb-6">內容...</p>
+            <div class="flex justify-center space-x-3">
+                <button id="modal-confirm-btn" onclick="closeModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl shadow transition w-full">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Form Questions based on image
+        const auditQuestions = [
+            { id: 1, text: "1. 病人入院或轉入時依「跌倒高風險因子」病人篩選≧4分者或2分以上但不尋求協助，即屬於高風險跌倒病人，須列入三班交班並每30分至1小時探視一次" },
+            { id: 2, text: "2. 病人住院期間，每天或病情有變化時，進行身體評估並記錄" },
+            { id: 3, text: "3. 病人為「跌倒高風險群」，給予衛教單張並指導病人或家屬，造成跌倒的危險因子及預防跌倒注意事項，並有紀錄。" },
+            { id: 4, text: "4. 病人為「跌倒高風險群」，訂定個別性護理措施。" },
+            { id: 5, text: "5. 病人為「跌倒高風險群」，於住院診斷小牌插入「預防跌倒」的標示牌。" },
+            { id: 6, text: "6. 病人為「跌倒高風險群」，於床頭掛「預防跌倒」的標示牌。" },
+            { id: 7, text: "7. 病人為「跌倒高風險群」，於交班單上有註明評估總分，每班列入交班，並交班下次再評估時間。" },
+            { id: 8, text: "8. 護理人員能說出所負責組別中跌倒高風險之病人。" },
+            { id: 9, text: "9. 病房內有預防跌倒環境措施，如隨時保持地板乾燥、通道無障礙物等。" },
+            { id: 10, text: "10. 知道並能告知清潔人員在拖地或清潔打蠟時，需放置「小心地滑」警示牌。" }
+        ];
+
+        const units = ["W91", "W92", "W82", "W72", "W51", "W52", "PICU", "AICU"];
+        let submissions = [];
+        let isDashboardAuthorized = false;
+
+        // Initialize Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kaohsiung-hospital-fall-audit';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch(e) {
+            console.error("Firebase init error:", e);
+        }
+
+        window.onload = function() {
+            document.getElementById('audit-date').valueAsDate = new Date();
+            renderQuestions();
+
+            // Authenticate and Listen to Firestore
+            if (auth) {
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (err) {
+                        console.warn("Auth fallback:", err);
+                        await signInAnonymously(auth);
+                    }
+                };
+
+                initAuth().then(() => {
+                    document.getElementById('cloud-status-text').innerText = "雲端已連線 (即時同步)";
+                    
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
+                    
+                    onSnapshot(colRef, (snapshot) => {
+                        submissions = [];
+                        snapshot.forEach((docSnap) => {
+                            submissions.push({ firebaseId: docSnap.id, ...docSnap.data() });
+                        });
+                        submissions.sort((a, b) => b.id - a.id);
+                        
+                        populateMonthFilter();
+                        if (isDashboardAuthorized) {
+                            updateDashboard();
+                        }
+                    }, (error) => {
+                        console.error("Firestore snapshot error:", error);
+                        document.getElementById('cloud-status-text').innerText = "雲端連線異常";
+                    });
+                });
+            }
+        };
+
+        // Populate Month Filter based on available submissions dates
+        function populateMonthFilter() {
+            const select = document.getElementById('month-filter');
+            const currentVal = select.value;
+            
+            // Extract unique YYYY-MM
+            const months = new Set();
+            submissions.forEach(s => {
+                if (s.date) {
+                    const ym = s.date.slice(0, 7); // "YYYY-MM"
+                    if (ym) months.add(ym);
+                }
+            });
+
+            // Also ensure current month is included if empty
+            const currentYM = new Date().toISOString().slice(0, 7);
+            months.add(currentYM);
+
+            const sortedMonths = Array.from(months).sort().reverse();
+
+            select.innerHTML = `<option value="all">全部月份 (總計)</option>` + 
+                sortedMonths.map(ym => {
+                    const [y, m] = ym.split('-');
+                    const label = `${y}年${parseInt(m, 10)}月`;
+                    return `<option value="${ym}">${label}</option>`;
+                }).join('');
+
+            // Restore selection if exists
+            if (Array.from(select.options).some(opt => opt.value === currentVal)) {
+                select.value = currentVal;
+            } else {
+                select.value = currentYM; // Default to current month
+            }
+        }
+
+        // Render Questionnaire items
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = auditQuestions.map((q) => `
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 hover:border-emerald-200 transition">
+                    <p class="font-medium text-slate-800 mb-3 text-sm sm:text-base">${q.text}</p>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="inline-flex items-center space-x-2 cursor-pointer bg-white px-4 py-2 rounded-lg border border-slate-200 hover:bg-emerald-50 transition flex-1 sm:flex-none">
+                            <input type="radio" name="q_${q.id}" value="done" checked class="text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-sm font-medium text-slate-700">做到</span>
+                        </label>
+                        <label class="inline-flex items-center space-x-2 cursor-pointer bg-white px-4 py-2 rounded-lg border border-slate-200 hover:bg-rose-50 transition flex-1 sm:flex-none">
+                            <input type="radio" name="q_${q.id}" value="undone" class="text-rose-600 focus:ring-rose-500">
+                            <span class="text-sm font-medium text-slate-700">未做到</span>
+                        </label>
+                        <label class="inline-flex items-center space-x-2 cursor-pointer bg-white px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition flex-1 sm:flex-none">
+                            <input type="radio" name="q_${q.id}" value="na" class="text-slate-600 focus:ring-slate-500">
+                            <span class="text-sm font-medium text-slate-700">不適用</span>
+                        </label>
+                    </div>
+                    <div class="mt-3">
+                        <input type="text" id="note_${q.id}" placeholder="備註說明（選填）..." class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Tab Switching Logic with Permission Check
+        window.switchTab = function(tab) {
+            const formView = document.getElementById('view-form');
+            const dashboardView = document.getElementById('view-dashboard');
+            const tabForm = document.getElementById('tab-form');
+            const tabDashboard = document.getElementById('tab-dashboard');
+
+            if (tab === 'form') {
+                formView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+                tabForm.className = "px-4 py-2 rounded-lg text-sm font-medium transition bg-white text-emerald-800 shadow";
+                tabDashboard.className = "px-4 py-2 rounded-lg text-sm font-medium transition text-white hover:bg-emerald-700";
+            } else {
+                if (!isDashboardAuthorized) {
+                    document.getElementById('password-modal').classList.remove('hidden');
+                    document.getElementById('admin-password-input').value = '';
+                    document.getElementById('admin-password-input').focus();
+                    return;
+                }
+                formView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                tabDashboard.className = "px-4 py-2 rounded-lg text-sm font-medium transition bg-white text-emerald-800 shadow";
+                tabForm.className = "px-4 py-2 rounded-lg text-sm font-medium transition text-white hover:bg-emerald-700";
+                updateDashboard();
+            }
+        };
+
+        window.requestDashboardAccess = function() {
+            switchTab('dashboard');
+        };
+
+        window.verifyAdminPassword = function() {
+            const pwd = document.getElementById('admin-password-input').value;
+            if (pwd === "kmuh2026") {
+                isDashboardAuthorized = true;
+                document.getElementById('password-modal').classList.add('hidden');
+                switchTab('dashboard');
+                showAlert("授權成功！已進入後台數據管理模式。", "success");
+            } else {
+                showAlert("密碼錯誤，請重新輸入", "warning");
+                document.getElementById('admin-password-input').focus();
+            }
+        };
+
+        window.closePasswordModal = function() {
+            document.getElementById('password-modal').classList.add('hidden');
+        };
+
+        window.lockDashboard = function() {
+            isDashboardAuthorized = false;
+            switchTab('form');
+            showAlert("已安全登出後台數據管理", "success");
+        };
+
+        // Submit Audit Form to Cloud
+        window.submitAuditForm = async function() {
+            const unit = document.getElementById('audit-unit').value;
+            const target = document.getElementById('audited-target').value.trim();
+            const date = document.getElementById('audit-date').value;
+            const auditor = document.getElementById('auditor-name').value.trim();
+
+            if (!auditor) {
+                showAlert("請填寫稽核人員姓名！", "warning");
+                return;
+            }
+            if (!target) {
+                showAlert("請填寫被稽核對象 / 床號 / 姓名！", "warning");
+                return;
+            }
+
+            const answers = {};
+            auditQuestions.forEach(q => {
+                const selected = document.querySelector(`input[name="q_${q.id}"]:checked`).value;
+                const note = document.getElementById(`note_${q.id}`).value;
+                answers[q.id] = { status: selected, note: note };
+            });
+
+            const newRecord = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleString(),
+                unit: unit,
+                target: target,
+                date: date,
+                auditor: auditor,
+                answers: answers
+            };
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>上傳中...</span>`;
+
+            try {
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
+                await addDoc(colRef, newRecord);
+
+                showAlert("稽核表已成功上傳並同步至雲端！", "success");
+                
+                // Reset form
+                document.getElementById('auditor-name').value = '';
+                document.getElementById('audited-target').value = '';
+                renderQuestions();
+            } catch(e) {
+                console.error("Error adding document: ", e);
+                showAlert("上傳失敗，請檢查網路連線後重試", "warning");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i><span>提交至雲端同步</span>`;
+            }
+        };
+
+        // Update Dashboard Analytics Matrix (with Month Filtering)
+        function updateDashboard() {
+            const selectedMonth = document.getElementById('month-filter').value;
+            
+            // Filter submissions by month if not 'all'
+            const filteredSubmissions = submissions.filter(s => {
+                if (selectedMonth === 'all') return true;
+                return s.date && s.date.startsWith(selectedMonth);
+            });
+
+            let totalDone = 0;
+            let totalUndone = 0;
+
+            let matrixHTML = '';
+            auditQuestions.forEach(q => {
+                let rowDone = 0;
+                let rowUndone = 0;
+                let unitCellsHTML = '';
+
+                units.forEach(u => {
+                    let doneCount = 0;
+                    filteredSubmissions.filter(s => s.unit === u).forEach(s => {
+                        if (s.answers[q.id] && s.answers[q.id].status === 'done') {
+                            doneCount++;
+                            rowDone++;
+                        } else if (s.answers[q.id] && s.answers[q.id].status === 'undone') {
+                            rowUndone++;
+                        }
+                    });
+                    unitCellsHTML += `<td class="p-3 text-center border-r border-slate-200 text-slate-600">${doneCount}</td>`;
+                });
+
+                let qTotal = rowDone + rowUndone;
+                let qDoneRate = qTotal > 0 ? ((rowDone / qTotal) * 100).toFixed(2) + '%' : '100.00%';
+                let qUndoneRate = qTotal > 0 ? ((rowUndone / qTotal) * 100).toFixed(2) + '%' : '0.00%';
+
+                totalDone += rowDone;
+                totalUndone += rowUndone;
+
+                matrixHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3 border-r border-slate-200 font-medium text-slate-800">${q.text}</td>
+                        ${unitCellsHTML}
+                        <td class="p-3 text-center border-r border-slate-200 font-bold bg-emerald-50/50 text-emerald-700">${qDoneRate}</td>
+                        <td class="p-3 text-center font-bold bg-rose-50/50 text-rose-700">${qUndoneRate}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('matrix-tbody').innerHTML = matrixHTML;
+
+            let overallTotalItems = totalDone + totalUndone;
+            let overallRate = overallTotalItems > 0 ? ((totalDone / overallTotalItems) * 100).toFixed(2) + '%' : '100.00%';
+            let overallUndoneRate = overallTotalItems > 0 ? ((totalUndone / overallTotalItems) * 100).toFixed(2) + '%' : '0.00%';
+
+            document.getElementById('stat-total-n').innerText = filteredSubmissions.length;
+            document.getElementById('stat-achievement-rate').innerText = overallRate;
+            document.getElementById('stat-unfulfilled-rate').innerText = overallUndoneRate;
+
+            document.getElementById('col-total-overall').innerText = overallRate;
+            document.getElementById('col-total-unfulfilled').innerText = overallUndoneRate;
+
+            // Render Submissions History table (filtered)
+            const subTbody = document.getElementById('submissions-tbody');
+            if (filteredSubmissions.length === 0) {
+                subTbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">此月份尚無雲端稽核紀錄</td></tr>`;
+            } else {
+                subTbody.innerHTML = filteredSubmissions.map(sub => {
+                    let doneCount = Object.values(sub.answers).filter(a => a.status === 'done').length;
+                    return `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <td class="p-3 text-slate-500 text-xs">${sub.timestamp}</td>
+                            <td class="p-3 font-semibold text-slate-700"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs">${sub.unit}</span></td>
+                            <td class="p-3 font-medium text-slate-800">${sub.target || '未填寫'}</td>
+                            <td class="p-3 text-slate-700">${sub.auditor}</td>
+                            <td class="p-3 text-slate-600">${sub.date}</td>
+                            <td class="p-3 font-medium text-emerald-600">${doneCount} / 10 項</td>
+                            <td class="p-3 text-right">
+                                <button onclick="deleteSubmission('${sub.firebaseId}')" class="text-rose-500 hover:text-rose-700 p-1 rounded transition" title="刪除紀錄">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Delete single submission from Firestore
+        window.deleteSubmission = async function(firebaseId) {
+            try {
+                if (!auth.currentUser) await signInAnonymously(auth);
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', firebaseId));
+                showAlert("已從雲端刪除該筆紀錄", "success");
+            } catch(e) {
+                console.error("Delete error:", e);
+                showAlert("刪除失敗", "warning");
+            }
+        };
+
+        // Export Report as CSV (Exports currently selected month or all)
+        window.exportCSV = function() {
+            const selectedMonth = document.getElementById('month-filter').value;
+            const filteredSubmissions = submissions.filter(s => {
+                if (selectedMonth === 'all') return true;
+                return s.date && s.date.startsWith(selectedMonth);
+            });
+
+            let csvContent = "\uFEFF"; // BOM for Excel UTF-8
+            csvContent += `項目,W91,W92,W82,W72,W51,W52,PICU,AICU,做到達成率,未做到比率\n`;
+            
+            auditQuestions.forEach(q => {
+                let rowDone = 0;
+                let rowUndone = 0;
+                let rowStr = `"${q.text.replace(/"/g, '""')}"`;
+                
+                units.forEach(u => {
+                    let doneCount = 0;
+                    filteredSubmissions.filter(s => s.unit === u).forEach(s => {
+                        if (s.answers[q.id] && s.answers[q.id].status === 'done') {
+                            doneCount++;
+                            rowDone++;
+                        } else if (s.answers[q.id] && s.answers[q.id].status === 'undone') {
+                            rowUndone++;
+                        }
+                    });
+                    rowStr += `,${doneCount}`;
+                });
+                let qTotal = rowDone + rowUndone;
+                let qDoneRate = qTotal > 0 ? ((rowDone / qTotal) * 100).toFixed(2) + '%' : '100.00%';
+                let qUndoneRate = qTotal > 0 ? ((rowUndone / qTotal) * 100).toFixed(2) + '%' : '0.00%';
+                rowStr += `,${qDoneRate},${qUndoneRate}\n`;
+                csvContent += rowStr;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `預防跌倒稽核統計報表_${selectedMonth}_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        // Custom Modal Utilities
+        window.showAlert = function(message, type = 'success') {
+            const modal = document.getElementById('custom-modal');
+            const title = document.getElementById('modal-title');
+            const msg = document.getElementById('modal-message');
+            const icon = document.getElementById('modal-icon');
+
+            msg.innerText = message;
+            if (type === 'success') {
+                title.innerText = "操作成功";
+                icon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl mb-4 mx-auto bg-emerald-100 text-emerald-600";
+                icon.innerHTML = '<i class="fa-solid fa-check"></i>';
+            } else {
+                title.innerText = "請注意";
+                icon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl mb-4 mx-auto bg-amber-100 text-amber-800";
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            }
+
+            modal.classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        };
+    </script>
+</body>
+</html>
